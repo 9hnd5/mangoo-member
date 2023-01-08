@@ -1,26 +1,20 @@
-import { Body, Controller, Get, Param, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { CommandBus, QueryBus } from "@nestjs/cqrs";
 import { Request } from "express";
 import { CreateUserCommand } from "src/modules/user/commands/create-user.command";
 import { LoginUserCommand } from "src/modules/user/commands/login-user.command";
-import { User } from "src/modules/user/entities/user.entity";
 import { JWTGuard } from "src/modules/user/guards/jwt.guard";
 import { GetUserQuery } from "src/modules/user/queries/get-user.query";
+import { GetUsersQuery } from "src/modules/user/queries/get-users.query";
 import { UserService } from "src/modules/user/user.service";
-import { DataSource } from "typeorm";
 
 @Controller("users")
 export class UserController {
-  constructor(
-    private commandBus: CommandBus,
-    private queryBus: QueryBus,
-    private userSerivce: UserService,
-    private ds: DataSource,
-  ) {}
+  constructor(private commandBus: CommandBus, private queryBus: QueryBus, private userSerivce: UserService) {}
   @UseGuards(JWTGuard)
   @Get()
-  getUsers() {
-    return this.ds.getMongoRepository(User).find({});
+  getUsers(@Query() query: GetUsersQuery) {
+    return this.queryBus.execute(query);
   }
 
   @UseGuards(JWTGuard)

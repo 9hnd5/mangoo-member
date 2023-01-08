@@ -1,24 +1,26 @@
-import { BadRequestException, NotFoundException } from "@nestjs/common";
+import { BadRequestException } from "@nestjs/common";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { JwtService } from "@nestjs/jwt";
+import { InjectModel } from "@nestjs/mongoose";
+import { IsEmail, IsNotEmpty } from "class-validator";
+import { Model } from "mongoose";
 import { LoginUserRes } from "src/modules/user/dtos/login-user.res";
-import { User } from "src/modules/user/entities/user.entity";
-import { DataSource, Repository } from "typeorm";
+import { User, UserDocument } from "src/modules/user/schemas/user.schema";
 
 export class LoginUserCommand {
-  constructor(public email: string, public password: string) {}
+  @IsEmail()
+  email: string;
+  @IsNotEmpty()
+  password: string;
 }
 
 @CommandHandler(LoginUserCommand)
-export class LoginUserCommandHandler
-  implements ICommandHandler<LoginUserCommand, LoginUserRes>
-{
-  private repo: Repository<User>;
-  constructor(ds: DataSource, private jwtService: JwtService) {
-    this.repo = ds.getMongoRepository(User);
-  }
+export class LoginUserCommandHandler implements ICommandHandler<LoginUserCommand, LoginUserRes> {
+  constructor(private jwtService: JwtService, @InjectModel(User.name) private userModel: Model<UserDocument>) {}
   async execute(command: LoginUserCommand): Promise<LoginUserRes> {
-    const user = await this.repo.findOneBy({ email: command.email });
+    const { email, password } = command;
+
+    const user = await this.userModel.findOne({ email }).exec();
     if (!user) throw new BadRequestException("Invalid Credencial");
     const res = new LoginUserRes();
     res.id = user._id;

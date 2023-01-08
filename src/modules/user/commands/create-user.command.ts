@@ -1,8 +1,9 @@
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { JwtService } from "@nestjs/jwt";
+import { InjectModel } from "@nestjs/mongoose";
+import { Model } from "mongoose";
 import { CreateUserRes } from "src/modules/user/dtos/create-user.res";
-import { Gender, Role, User } from "src/modules/user/entities/user.entity";
-import { DataSource } from "typeorm";
+import { Gender, Role, User, UserDocument } from "src/modules/user/schemas/user.schema";
 
 export class CreateUserCommand {
   constructor(
@@ -17,25 +18,15 @@ export class CreateUserCommand {
 }
 
 @CommandHandler(CreateUserCommand)
-export class CreateUserCommandHandler
-  implements ICommandHandler<CreateUserCommand, CreateUserRes>
-{
-  constructor(private jwtService: JwtService, private dataSource: DataSource) {}
+export class CreateUserCommandHandler implements ICommandHandler<CreateUserCommand, CreateUserRes> {
+  constructor(private jwtService: JwtService, @InjectModel(User.name) private userModel: Model<UserDocument>) {}
   async execute(command: CreateUserCommand): Promise<CreateUserRes> {
-    const user = new User();
-    user.firstName = command.firstName;
-    user.lastName = command.lastName;
-    user.email = command.email;
-    user.password = command.password;
-    user.dateOfBirth = command.dateOfBirth;
-    user.gender = command.gender;
-    user.role = command.role;
-    const result = await this.dataSource.getMongoRepository(User).save(user);
-
+    const { firstName, lastName, email, password, dateOfBirth, gender, role } = command;
+    const userModel = new this.userModel({ firstName, lastName, email, password, dateOfBirth, gender, role });
+    const rs = await userModel.save();
     const res = new CreateUserRes();
-    res.id = result._id;
-    res.token = this.jwtService.sign({ id: user._id, role: user.role });
-
+    res.id = rs._id;
+    res.token = this.jwtService.sign({ id: rs._id, role: rs.role });
     return res;
   }
 }

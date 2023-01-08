@@ -1,6 +1,6 @@
-import { ObjectID } from "typeorm";
+import { ObjectId } from "mongoose";
 
 export class CreateUserRes {
-  id: ObjectID;
+  id: ObjectId;
   token: string;
 }
